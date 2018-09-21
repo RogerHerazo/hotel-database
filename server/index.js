@@ -6,6 +6,7 @@ const monk = require('monk');
 const app = express();
 const db = monk('localhost/hotelmadeeasy');
 const hotels = db.get('hotels');
+const reservations = db.get('reservations');
 
 app.use(cors());
 app.use(express.json());
@@ -18,20 +19,46 @@ app.get('/', (req, res) => {
         });
 });
 
-app.get('/hotel-name', (req,res) => {
-
+app.get('/id', (req,res) => {
+    hotels.find({
+        _id: req.param("id")
+    }).then(hotels => {
+        res.json(hotels);
+    });
+});
+ 
+app.get('/name', (req,res) => {
+    hotels.find({
+        NAME: req.query.name
+    }).then(hotels => {
+        res.json(hotels);
+    });
 });
 
 app.get('/state', (req,res) => {
-
+    hotels.find({
+        STATE: req.param("state")
+    }).then(hotels => {
+        res.json(hotels);
+    });
 });
 
 app.get('/hotel-type', (req,res) => {
-
+    var filter = {
+        "$and": req.body
+    };
+    //filter["$and"] = req.body;
+    hotels.find(filter).then(hotels => {
+        res.json(hotels);
+    });
 });
 
-app.get('/size', (req,res) => {
-
+app.get('/rooms', (req,res) => {
+    hotels.find({
+        ROOMS: req.param("rooms")
+    }).then(hotels => {
+        res.json(hotels);
+    });
 });
 
 function isValidHotel(hotel){
@@ -75,6 +102,107 @@ app.post('/add', (req,res) => {
             message: 'You did not complete all the fields'
         });
     }
+});
+
+function isValidUser(user){
+    console.log(user);
+    return true;
+}
+
+function isValidHotel(hotel){
+    console.log(hotel);
+    return true;
+}
+
+function isValidDate(date){
+    console.log(date);
+    return true;
+}
+
+function isValidReservation(reservation){
+    //console.log(JSON.parse(reservation));
+    if( reservation.userID && reservation.userID.toString().trim() !== '' &&
+        reservation.hotelID && reservation.hotelID.toString().trim() !== '' &&
+        reservation.start && reservation.start.toString().trim() !== '' &&
+        reservation.end && reservation.end.toString().trim() !== ''){
+        if(isValidUser(reservation.userID)){
+            if(isValidHotel(reservation.hotelID)){
+                if(isValidDate(reservation.start) && isValidDate(reservation.end)){
+                    return respond = {
+                        status: '400',
+                        message: 'All Good'
+                    }
+                }else{
+                    return respond = {
+                        status: '411',
+                        message: 'Not valid start or end dates'
+                    }
+                }
+            }else{
+                return respond = {
+                    status: '422',
+                    message: 'Not valid HotelID'
+                }
+            }     
+        }else{
+            return respond = {
+                status: '433',
+                message: 'Not valid UserID'
+            }
+        }
+    }else{
+        return respond = {
+            status: '444',
+            message: 'You missed fields'
+        }
+    }
+    
+
+
+}
+
+function availableRoom(reservation){
+    return true;
+}
+
+app.post('/reservation', (req,res) => {
+    //console.log(req.body);
+    if(isValidReservation(req.body).status === '400'){
+        const reservation = {
+            userID: req.body.userID.toString(),
+            hotelID: req.body.hotelID.toString(),
+            start: req.body.start.toString(),
+            end: req.body.end.toString(),
+        };
+        if(availableRoom(reservation)){
+            res.status(respond.status);
+            res.json(respond.message);
+            /*
+            reservations
+                .insert(reservation)
+                .then(createdReservation => {
+                    console.log(createdReservation);
+                    res.json(createdReservation)
+                });
+             */   
+        }else{
+            console.log('ERROR');
+            res.status('466');
+            res.json({message: 'No rooms available'});
+        }
+    }else{
+        console.log('ERROR');
+        res.status(respond.status);
+        res.json(respond.message);
+    }
+});
+
+app.get('/reservations', (req, res) => {
+    reservations
+        .find()
+        .then(reservations => {
+            res.json(reservations);
+        });
 });
 
 app.put('/update', (req,res) => {
